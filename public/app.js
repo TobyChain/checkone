@@ -71,8 +71,59 @@ chatForm.addEventListener("submit", async (e) => {
   if (!text) return;
   chatInput.value = "";
   addChatMsg("user", text);
-  // Placeholder for Phase 2: actual LLM chat
-  addChatMsg("asha", "Asha 还在成长中……（Phase 2 将接入 LLM）");
+
+  const thinking = addChatMsg("tool", "思考中…");
+  try {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: [{ role: "user", content: text }] }),
+    });
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    let streamEl = null;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      let nl;
+      while ((nl = buf.indexOf("\n")) >= 0) {
+        const line = buf.slice(0, nl).trim();
+        buf = buf.slice(nl + 1);
+        if (line.startsWith("event:")) {
+          const eventType = line.slice(6).trim();
+          const nextNl = buf.indexOf("\n");
+          if (nextNl >= 0 && buf.startsWith("data:")) {
+            const data = JSON.parse(buf.slice(5, nextNl).trim());
+            buf = buf.slice(nextNl + 1);
+            if (eventType === "delta") {
+              if (!streamEl) {
+                thinking.remove();
+                streamEl = addChatMsg("asha", data.text);
+              } else {
+                streamEl.textContent += data.text;
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+              }
+            } else if (eventType === "tool_start") {
+              thinking.textContent = `调用工具: ${data.name}…`;
+            } else if (eventType === "tool_end") {
+              thinking.textContent = `工具 ${data.name} 完成 (${data.durationMs}ms)`;
+            } else if (eventType === "message") {
+              thinking.remove();
+              if (!streamEl) addChatMsg("asha", data.text);
+            } else if (eventType === "error") {
+              thinking.remove();
+              addChatMsg("asha", "抱歉，出了点问题：" + data.message);
+            }
+          }
+        }
+      }
+    }
+  } catch (err) {
+    thinking.remove();
+    addChatMsg("asha", "抱歉，请求失败：" + (err.message || "网络错误"));
+  }
 });
 
 /* ---- config ---- */

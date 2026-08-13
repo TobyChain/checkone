@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { config, getLlmConfig, maskApiKey } from "./config.js";
 import { store, applySettingsPatch } from "./store.js";
 import { addClient, broadcast, sseFrame } from "./events.js";
+import chatRouter from "./routes/chat.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -64,6 +65,9 @@ app.post("/api/shortcut/url", (req, res) => {
   broadcast("url_received", { url, ts: Date.now() });
   res.json({ ok: true, url });
 });
+
+// ---- API: chat ----
+app.use("/api", chatRouter);
 
 // ---- SSE events ----
 function sseInit(res: express.Response): void {
