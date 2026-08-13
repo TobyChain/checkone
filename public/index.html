@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>壹查 CheckOne</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<div id="app">
+  <nav id="tabs">
+    <button data-tab="dashboard" class="active">仪表盘</button>
+    <button data-tab="chat">对话 Asha</button>
+    <button data-tab="config">设置</button>
+  </nav>
+
+  <section id="tab-dashboard" class="tab-content active">
+    <div class="actions-bar">
+      <button id="btn-screenshot-full">截图全屏</button>
+      <button id="btn-new-monitor">新建监控</button>
+    </div>
+    <div id="monitor-list">
+      <p class="empty-hint">暂无活跃监控。在「对话 Asha」中用自然语言创建，或点击「新建监控」。</p>
+    </div>
+  </section>
+
+  <section id="tab-chat" class="tab-content">
+    <div id="chat-messages"></div>
+    <form id="chat-form">
+      <input type="text" id="chat-input" placeholder="对 Asha 说点什么…" autocomplete="off" />
+      <button type="submit">发送</button>
+    </form>
+  </section>
+
+  <section id="tab-config" class="tab-content">
+    <h2>LLM 配置</h2>
+    <form id="config-form">
+      <label>Base URL <input type="text" id="cfg-baseUrl" placeholder="https://api.openai.com/v1" /></label>
+      <label>API Key <input type="password" id="cfg-apiKey" placeholder="sk-..." /></label>
+      <label>Model <input type="text" id="cfg-model" placeholder="deepseek-v4-flash" /></label>
+      <button type="submit">保存</button>
+    </form>
+    <h2>监控设置</h2>
+    <form id="monitor-config-form">
+      <label>截图间隔 (秒) <input type="number" id="cfg-ss-interval" min="1" /></label>
+      <label>终端轮询 (秒) <input type="number" id="cfg-poll-interval" min="1" /></label>
+      <label><input type="checkbox" id="cfg-notify-done" /> 监控完成时通知</label>
+      <label><input type="checkbox" id="cfg-notify-error" /> 监控出错时通知</label>
+      <button type="submit">保存</button>
+    </form>
+  </section>
+</div>
+<script src="/app.js"></script>
+</body>
+</html>

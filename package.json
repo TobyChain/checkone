@@ -1,0 +1,76 @@
+{
+  "name": "checkone",
+  "version": "0.1.0",
+  "description": "壹查 (CheckOne) — 帮你维护 AI 时代的心流状态",
+  "type": "module",
+  "main": "electron/main.cjs",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "prepack": "tsc",
+    "app": "npm run build && electron .",
+    "dist:mac": "bash scripts/build-mac.sh"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9",
+    "express": "^5.1.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "electron": "^33.4.11",
+    "electron-builder": "^25.0.0",
+    "playwright": "^1.62.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.10"
+  },
+  "files": [
+    "dist",
+    "public",
+    "electron",
+    "package.json"
+  ],
+  "build": {
+    "appId": "com.checkone.app",
+    "productName": "CheckOne",
+    "asar": false,
+    "files": [
+      "dist/**",
+      "public/**",
+      "electron/**",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "build/icon.icns"
+    },
+    "dmg": {
+      "title": "壹查 CheckOne",
+      "contents": [
+        { "x": 140, "y": 200, "type": "file" },
+        { "x": 400, "y": 200, "type": "link", "path": "/Applications" }
+      ]
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "TobyChain",
+      "repo": "checkone"
+    },
+    "directories": {
+      "output": "release"
+    }
+  }
+}
