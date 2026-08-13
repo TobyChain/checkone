@@ -49,6 +49,35 @@ app.put("/api/settings", (req, res) => {
   }
 });
 
+// ---- API: LLM test ----
+app.post("/api/llm/test", async (req, res) => {
+  const { getLlmConfig, llmConfigured } = await import("./config.js");
+  if (!llmConfigured()) {
+    res.json({ ok: false, error: "LLM 未配置" });
+    return;
+  }
+  try {
+    const llm = getLlmConfig();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15_000);
+    const r = await fetch(`${llm.baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${llm.apiKey}` },
+      body: JSON.stringify({ model: llm.model, messages: [{ role: "user", content: "ping" }], max_tokens: 1 }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (r.ok) {
+      res.json({ ok: true, message: `连接成功 (${llm.model})` });
+    } else {
+      const text = await r.text().catch(() => "");
+      res.json({ ok: false, error: `HTTP ${r.status}: ${text.slice(0, 200)}` });
+    }
+  } catch (err) {
+    res.json({ ok: false, error: err instanceof Error ? err.message : String(err) });
+  }
+});
+
 // ---- API: screenshot ----
 app.post("/api/screenshot", (req, res) => {
   const screenshotDir = path.join(config.dataDir, "screenshots");

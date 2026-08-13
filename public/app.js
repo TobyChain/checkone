@@ -242,10 +242,13 @@ document.getElementById("cfg-preset").addEventListener("change", (e) => {
 
 document.getElementById("btn-llm-test").addEventListener("click", async () => {
   const result = document.getElementById("llm-test-result");
+  const btn = document.getElementById("btn-llm-test");
   result.textContent = "测试中…";
   result.className = "test-result";
+  btn.disabled = true;
   try {
-    const res = await fetch("/api/settings", {
+    // 1. Save settings first so server has latest config
+    await fetch("/api/settings", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -256,17 +259,22 @@ document.getElementById("btn-llm-test").addEventListener("click", async () => {
         },
       }),
     });
+    // 2. Actually test the LLM connection
+    const res = await fetch("/api/llm/test", { method: "POST" });
     const data = await res.json();
     if (data.ok) {
-      result.textContent = "✓ 配置已保存";
+      result.textContent = "✓ " + data.message;
       result.className = "test-result ok";
+      document.getElementById("llm-warning").style.display = "none";
     } else {
-      result.textContent = "✗ " + (data.error || "保存失败");
+      result.textContent = "✗ " + (data.error || "连接失败");
       result.className = "test-result err";
     }
   } catch (err) {
     result.textContent = "✗ " + (err.message || "网络错误");
     result.className = "test-result err";
+  } finally {
+    btn.disabled = false;
   }
 });
 
