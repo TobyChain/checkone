@@ -1,5 +1,6 @@
 import type { ToolDefinition } from "../agent/llm.js";
 import type { ToolHandler } from "../agent/loop.js";
+import { skillRegistry } from "../agent/skill-registry.js";
 
 export function buildSkillTools(): { tools: ToolDefinition[]; handlers: Record<string, ToolHandler> } {
   const tools: ToolDefinition[] = [
@@ -7,7 +8,7 @@ export function buildSkillTools(): { tools: ToolDefinition[]; handlers: Record<s
       type: "function",
       function: {
         name: "list_skills",
-        description: "列出所有可用技能。",
+        description: "列出所有可用技能及其描述。",
         parameters: { type: "object", properties: {} },
       },
     },
@@ -15,7 +16,7 @@ export function buildSkillTools(): { tools: ToolDefinition[]; handlers: Record<s
       type: "function",
       function: {
         name: "call_skill",
-        description: "调用一个已注册的技能。",
+        description: "调用一个已注册的技能。先用 list_skills 查看可用技能。",
         parameters: {
           type: "object",
           properties: {
@@ -30,12 +31,20 @@ export function buildSkillTools(): { tools: ToolDefinition[]; handlers: Record<s
 
   const handlers: Record<string, ToolHandler> = {
     list_skills: async () => {
-      // Placeholder — skills will be registered in Phase 4
-      return JSON.stringify({ ok: true, skills: ["暂无已注册技能"] });
+      return JSON.stringify({
+        ok: true,
+        skills: skillRegistry.list().map((s) => ({ name: s.name, description: s.description })),
+      });
     },
     call_skill: async (args) => {
       const name = String(args.name);
-      return JSON.stringify({ ok: false, error: `技能 "${name}" 未注册（Phase 4 将实现技能系统）` });
+      let parsed: Record<string, unknown> = {};
+      if (typeof args.args === "string" && args.args) {
+        try { parsed = JSON.parse(args.args); } catch {}
+      } else if (typeof args.args === "object" && args.args) {
+        parsed = args.args as Record<string, unknown>;
+      }
+      return skillRegistry.run(name, parsed);
     },
   };
 

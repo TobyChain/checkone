@@ -4,6 +4,19 @@ const fs   = require("node:fs");
 const net  = require("node:net");
 const http = require("node:http");
 
+// Auto-update via GitHub Releases (electron-updater). Only active in packaged builds.
+let autoUpdater = null;
+if (app.isPackaged) {
+  try {
+    autoUpdater = require("electron-updater").autoUpdater;
+    autoUpdater.autoDownload = true;
+    autoUpdater.autoInstallOnAppQuit = true;
+  } catch (e) {
+    console.error("[updater] electron-updater unavailable:", e);
+    autoUpdater = null;
+  }
+}
+
 const ROOT = path.join(__dirname, "..");
 const isDev = !app.isPackaged;
 
@@ -187,6 +200,21 @@ function subscribeEvents() {
   req.on("error", (e) => { logMain(`subscribeEvents: request error ${e.message}`); setTimeout(subscribeEvents, 3000); });
 }
 
+// ---- auto-update ----
+function initAutoUpdate() {
+  if (!autoUpdater) return;
+  autoUpdater.on("update-available", (info) => logMain(`[updater] update available: ${info.version}`));
+  autoUpdater.on("update-downloaded", (info) => {
+    logMain(`[updater] downloaded ${info.version}, will install on quit`);
+    if (Notification.isSupported()) {
+      const n = new Notification({ title: "壹查", body: `v${info.version} 已下载，退出后自动安装` });
+      n.show();
+    }
+  });
+  autoUpdater.on("error", (err) => logMain(`[updater] error: ${err?.message || err}`));
+  setTimeout(() => autoUpdater.checkForUpdates().catch((e) => logMain(`[updater] check failed: ${e?.message || e}`)), 8000);
+}
+
 // ---- lifecycle ----
 app.whenReady().then(async () => {
   if (process.platform === "darwin") app.setActivationPolicy("accessory");
@@ -199,6 +227,7 @@ app.whenReady().then(async () => {
   createMainWindow();
   registerShortcuts();
   subscribeEvents();
+  initAutoUpdate();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
