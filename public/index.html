@@ -19,6 +19,15 @@
       <button id="btn-screenshot-full">截图全屏</button>
       <button id="btn-new-monitor">新建监控</button>
     </div>
+    <div id="new-monitor-row" style="display:none; gap:6px; margin-bottom:12px;">
+      <select id="nm-type" style="padding:4px 8px; border:1px solid #d2d2d7; border-radius:6px;">
+        <option value="terminal">终端命令</option>
+        <option value="web">网页 URL</option>
+      </select>
+      <input type="text" id="nm-input" placeholder="如：npm install 或 https://example.com" style="flex:1; padding:4px 10px; border:1px solid #d2d2d7; border-radius:6px;" />
+      <button id="nm-submit">开始</button>
+      <button id="nm-cancel">取消</button>
+    </div>
     <div id="monitor-list">
       <p class="empty-hint">暂无活跃监控。在「对话 Asha」中用自然语言创建，或点击「新建监控」。</p>
     </div>

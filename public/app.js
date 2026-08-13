@@ -15,7 +15,7 @@ es.addEventListener("monitor_update", (e) => updateMonitorCard(JSON.parse(e.data
 es.addEventListener("monitor_done", (e) => updateMonitorCard(JSON.parse(e.data)));
 es.addEventListener("screenshot_taken", (e) => console.log("screenshot:", JSON.parse(e.data).path));
 es.addEventListener("hello", () => console.log("[sse] connected"));
-es.onerror = () => { es.close(); setTimeout(() => window.location.reload(), 5000); };
+es.onerror = () => { es.close(); setTimeout(() => location.reload(), 10000); };
 
 /* ---- dashboard ---- */
 function addMonitorCard(data) {
@@ -52,18 +52,33 @@ document.getElementById("btn-screenshot-full").addEventListener("click", async (
   await fetch("/api/screenshot", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "full" }) });
 });
 
-document.getElementById("btn-new-monitor").addEventListener("click", async () => {
-  const input = prompt("监控类型：web 或 terminal\n例如：web https://example.com\n或：terminal npm install", "terminal npm install");
-  if (!input) return;
-  const [type, ...rest] = input.trim().split(/\s+/);
-  const value = rest.join(" ");
-  if (type === "web" && value) {
-    await fetch("/api/monitors", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "web", url: value }) });
-  } else if (type === "terminal" && value) {
-    await fetch("/api/monitors", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "terminal", command: value }) });
-  } else {
-    alert("格式：web <url> 或 terminal <command>");
-  }
+document.getElementById("btn-new-monitor").addEventListener("click", () => {
+  const row = document.getElementById("new-monitor-row");
+  row.style.display = "flex";
+  document.getElementById("nm-input").focus();
+});
+
+document.getElementById("nm-cancel").addEventListener("click", () => {
+  document.getElementById("new-monitor-row").style.display = "none";
+  document.getElementById("nm-input").value = "";
+});
+
+document.getElementById("nm-submit").addEventListener("click", async () => {
+  const type = document.getElementById("nm-type").value;
+  const value = document.getElementById("nm-input").value.trim();
+  if (!value) return;
+  document.getElementById("new-monitor-row").style.display = "none";
+  document.getElementById("nm-input").value = "";
+  await fetch("/api/monitors", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(type === "web" ? { type: "web", url: value } : { type: "terminal", command: value }),
+  });
+});
+
+document.getElementById("nm-input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") document.getElementById("nm-submit").click();
+  if (e.key === "Escape") document.getElementById("nm-cancel").click();
 });
 
 /* ---- chat ---- */
@@ -84,59 +99,72 @@ chatForm.addEventListener("submit", async (e) => {
   const text = chatInput.value.trim();
   if (!text) return;
   chatInput.value = "";
+  chatInput.disabled = true;
   addChatMsg("user", text);
 
-  const thinking = addChatMsg("tool", "思考中…");
+  const thinking = document.createElement("div");
+  thinking.className = "chat-msg tool";
+  thinking.textContent = "思考中…";
+  chatMessages.appendChild(thinking);
+
   try {
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ messages: [{ role: "user", content: text }] }),
     });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buf = "";
     let streamEl = null;
+
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
       buf += decoder.decode(value, { stream: true });
-      let nl;
-      while ((nl = buf.indexOf("\n")) >= 0) {
-        const line = buf.slice(0, nl).trim();
-        buf = buf.slice(nl + 1);
-        if (line.startsWith("event:")) {
-          const eventType = line.slice(6).trim();
-          const nextNl = buf.indexOf("\n");
-          if (nextNl >= 0 && buf.startsWith("data:")) {
-            const data = JSON.parse(buf.slice(5, nextNl).trim());
-            buf = buf.slice(nextNl + 1);
-            if (eventType === "delta") {
-              if (!streamEl) {
-                thinking.remove();
-                streamEl = addChatMsg("asha", data.text);
-              } else {
-                streamEl.textContent += data.text;
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-              }
-            } else if (eventType === "tool_start") {
-              thinking.textContent = `调用工具: ${data.name}…`;
-            } else if (eventType === "tool_end") {
-              thinking.textContent = `工具 ${data.name} 完成 (${data.durationMs}ms)`;
-            } else if (eventType === "message") {
-              thinking.remove();
-              if (!streamEl) addChatMsg("asha", data.text);
-            } else if (eventType === "error") {
-              thinking.remove();
-              addChatMsg("asha", "抱歉，出了点问题：" + data.message);
-            }
+      // Parse complete SSE frames (separated by \n\n)
+      let sep;
+      while ((sep = buf.indexOf("\n\n")) >= 0) {
+        const frame = buf.slice(0, sep);
+        buf = buf.slice(sep + 2);
+        let eventType = "";
+        let dataStr = "";
+        for (const fl of frame.split("\n")) {
+          if (fl.startsWith("event:")) eventType = fl.slice(6).trim();
+          else if (fl.startsWith("data:")) dataStr = fl.slice(5).trim();
+        }
+        if (!eventType) continue;
+        let data = {};
+        try { data = JSON.parse(dataStr); } catch {}
+        if (eventType === "delta") {
+          if (!streamEl) {
+            thinking.remove();
+            streamEl = document.createElement("div");
+            streamEl.className = "chat-msg asha";
+            chatMessages.appendChild(streamEl);
           }
+          streamEl.textContent += data.text || "";
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+        } else if (eventType === "tool_start") {
+          thinking.textContent = `调用工具: ${data.name}…`;
+        } else if (eventType === "tool_end") {
+          thinking.textContent = `工具 ${data.name} 完成 (${data.durationMs}ms)`;
+        } else if (eventType === "message") {
+          thinking.remove();
+          if (!streamEl) addChatMsg("asha", data.text || "");
+        } else if (eventType === "error") {
+          thinking.remove();
+          addChatMsg("asha", "抱歉，出了点问题：" + (data.message || "未知错误"));
         }
       }
     }
   } catch (err) {
     thinking.remove();
     addChatMsg("asha", "抱歉，请求失败：" + (err.message || "网络错误"));
+  } finally {
+    chatInput.disabled = false;
+    chatInput.focus();
   }
 });
 
