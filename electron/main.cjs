@@ -22,8 +22,14 @@ const isDev = !app.isPackaged;
 
 // Packaged apps have no visible stdout.
 const LOG_PATH = path.join(app.getPath("userData"), "main.log");
+const TRACE = "/tmp/checkone-trace.log";
+function trace(msg) {
+  try { fs.appendFileSync(TRACE, `${new Date().toISOString()} ${msg}\n`); } catch {}
+}
+trace("main.cjs loaded");
 function logMain(msg) {
   try { fs.appendFileSync(LOG_PATH, `${new Date().toISOString()} ${msg}\n`); } catch {}
+  trace(msg);
 }
 
 let serverProc = null;
@@ -78,6 +84,7 @@ function waitForServer(port, timeoutMs = 20_000) {
 // ---- server ----
 function startServer(port) {
   const entry = path.join(ROOT, "dist", "index.js");
+  trace(`startServer: entry=${entry} exists=${fs.existsSync(entry)}`);
   serverProc = utilityProcess.fork(entry, [], {
     stdio: "pipe",
     env: {
@@ -112,7 +119,7 @@ function createMainWindow() {
   mainWin.on("closed", () => { mainWin = null; });
 }
 
-function showMainWindow(tab?: string) {
+function showMainWindow(tab) {
   if (!mainWin) createMainWindow();
   else { mainWin.show(); mainWin.focus(); }
 }
@@ -219,7 +226,7 @@ function initAutoUpdate() {
 app.whenReady().then(async () => {
   if (process.platform === "darwin") app.setActivationPolicy("accessory");
   logMain(`app ready: packaged=${app.isPackaged} version=${app.getVersion()}`);
-  serverPort = process.env.BELLONE_PORT ? Number(process.env.BELLONE_PORT) : await getFreePort();
+  serverPort = process.env.CHECKONE_PORT ? Number(process.env.CHECKONE_PORT) : await getFreePort();
   logMain(`server port: ${serverPort}`);
   startServer(serverPort);
   try { await waitForServer(serverPort); } catch (err) { console.error(err); }
