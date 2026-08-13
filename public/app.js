@@ -184,7 +184,10 @@ chatForm.addEventListener("submit", async (e) => {
           streamEl.textContent += data.text || "";
           chatMessages.scrollTop = chatMessages.scrollHeight;
         } else if (eventType === "tool_start") {
+          // Reset stream element so next iteration creates a fresh bubble
+          if (streamEl) { streamEl = null; }
           thinking.textContent = `调用工具: ${data.name}…`;
+          thinking.style.display = "block";
         } else if (eventType === "tool_end") {
           thinking.textContent = `工具 ${data.name} 完成 (${data.durationMs}ms)`;
         } else if (eventType === "message") {
