@@ -5,6 +5,8 @@ import { buildWebSearchTools } from "../tools/web-search-tools.js";
 import { buildFileTools } from "../tools/file-tools.js";
 import { buildMemoryTools } from "../tools/memory-tools.js";
 import { buildSkillTools } from "../tools/skill-tools.js";
+import { buildWebMonitorTools } from "../tools/web-monitor-tools.js";
+import { buildTerminalTools } from "../tools/terminal-tools.js";
 
 export function buildToolkit(): { tools: ToolDefinition[]; handlers: Record<string, ToolHandler> } {
   const modules = [
@@ -13,6 +15,8 @@ export function buildToolkit(): { tools: ToolDefinition[]; handlers: Record<stri
     buildFileTools(),
     buildMemoryTools(),
     buildSkillTools(),
+    buildWebMonitorTools(),
+    buildTerminalTools(),
   ];
 
   return {

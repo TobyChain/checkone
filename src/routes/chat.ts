@@ -5,6 +5,7 @@ import { buildSystemPrompt } from "../agent/prompt.js";
 import { getOrCreateSession } from "../agent/session.js";
 import { sseFrame } from "../events.js";
 import { store } from "../store.js";
+import { monitorRegistry } from "../monitor/index.js";
 
 const router = Router();
 
@@ -45,7 +46,7 @@ router.post("/chat", async (req, res) => {
 
   const { tools, handlers } = buildToolkit();
   const systemPrompt = buildSystemPrompt({
-    activeMonitors: 0,
+    activeMonitors: monitorRegistry.count(),
     memoryCount: store.memory.length,
   });
   const context = session.buildContext(systemPrompt);

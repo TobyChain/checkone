@@ -5,6 +5,8 @@ import { config, getLlmConfig, maskApiKey } from "./config.js";
 import { store, applySettingsPatch } from "./store.js";
 import { addClient, broadcast, sseFrame } from "./events.js";
 import chatRouter from "./routes/chat.js";
+import monitorRouter from "./routes/monitor.js";
+import { monitorRegistry } from "./monitor/index.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -29,6 +31,7 @@ app.get("/api/status", (_req, res) => {
     app: "checkone",
     name: "壹查",
     llmConfigured: Boolean(getLlmConfig().baseUrl && getLlmConfig().apiKey),
+    activeMonitors: monitorRegistry.count(),
     settings: { ...store.settings, llm: { ...store.settings.llm, apiKey: store.maskApiKey() } },
   });
 });
@@ -68,6 +71,9 @@ app.post("/api/shortcut/url", (req, res) => {
 
 // ---- API: chat ----
 app.use("/api", chatRouter);
+
+// ---- API: monitors ----
+app.use("/api", monitorRouter);
 
 // ---- SSE events ----
 function sseInit(res: express.Response): void {

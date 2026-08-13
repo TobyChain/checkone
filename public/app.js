@@ -52,6 +52,20 @@ document.getElementById("btn-screenshot-full").addEventListener("click", async (
   await fetch("/api/screenshot", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "full" }) });
 });
 
+document.getElementById("btn-new-monitor").addEventListener("click", async () => {
+  const input = prompt("监控类型：web 或 terminal\n例如：web https://example.com\n或：terminal npm install", "terminal npm install");
+  if (!input) return;
+  const [type, ...rest] = input.trim().split(/\s+/);
+  const value = rest.join(" ");
+  if (type === "web" && value) {
+    await fetch("/api/monitors", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "web", url: value }) });
+  } else if (type === "terminal" && value) {
+    await fetch("/api/monitors", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "terminal", command: value }) });
+  } else {
+    alert("格式：web <url> 或 terminal <command>");
+  }
+});
+
 /* ---- chat ---- */
 const chatMessages = document.getElementById("chat-messages");
 const chatForm = document.getElementById("chat-form");
