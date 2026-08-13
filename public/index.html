@@ -42,21 +42,70 @@
   </section>
 
   <section id="tab-config" class="tab-content">
-    <h2>LLM 配置</h2>
-    <form id="config-form">
-      <label>Base URL <input type="text" id="cfg-baseUrl" placeholder="https://api.openai.com/v1" /></label>
-      <label>API Key <input type="password" id="cfg-apiKey" placeholder="sk-..." /></label>
-      <label>Model <input type="text" id="cfg-model" placeholder="deepseek-v4-flash" /></label>
-      <button type="submit">保存</button>
-    </form>
-    <h2>监控设置</h2>
-    <form id="monitor-config-form">
-      <label>截图间隔 (秒) <input type="number" id="cfg-ss-interval" min="1" /></label>
-      <label>终端轮询 (秒) <input type="number" id="cfg-poll-interval" min="1" /></label>
-      <label><input type="checkbox" id="cfg-notify-done" /> 监控完成时通知</label>
-      <label><input type="checkbox" id="cfg-notify-error" /> 监控出错时通知</label>
-      <button type="submit">保存</button>
-    </form>
+    <div class="settings-header">
+      <h1>设置</h1>
+      <p class="subtitle">配置 AI 助手和监控偏好</p>
+    </div>
+
+    <div id="llm-warning" class="warning-banner" style="display:none;">
+      <span>⚠ LLM 尚未配置，Asha 无法对话。请在下方填写 API 信息。</span>
+    </div>
+
+    <section class="card">
+      <div class="card-header-row"><h2>AI 助手（Asha · 艾莎）</h2></div>
+      <p class="muted">任意 OpenAI 兼容接口。Base URL 填到版本号即可（如 …/v1），Key 在所有 AI 功能中共用。</p>
+
+      <label>服务商预设</label>
+      <select id="cfg-preset">
+        <option value="custom">自定义</option>
+        <option value="openai">OpenAI</option>
+        <option value="deepseek">DeepSeek</option>
+        <option value="dashscope">DashScope (通义千问)</option>
+        <option value="glm">GLM (智谱)</option>
+        <option value="moonshot">Moonshot (月之暗面)</option>
+        <option value="volcengine">Volcengine (火山引擎)</option>
+        <option value="ollama">Ollama (本地)</option>
+      </select>
+
+      <label>Base URL</label>
+      <input type="text" id="cfg-baseUrl" placeholder="https://api.deepseek.com/v1" />
+
+      <label>API Key</label>
+      <input type="password" id="cfg-apiKey" placeholder="sk-…" />
+
+      <label>模型</label>
+      <input type="text" id="cfg-model" placeholder="deepseek-v4-flash" />
+
+      <div class="row">
+        <button type="button" class="chip" id="btn-llm-test">测试连接</button>
+        <span id="llm-test-result" class="test-result"></span>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header-row"><h2>监控设置</h2></div>
+      <p class="muted">控制截图频率、终端轮询和通知行为。</p>
+
+      <label>截图间隔（秒）</label>
+      <input type="number" id="cfg-ss-interval" min="1" value="5" />
+
+      <label>终端轮询间隔（秒）</label>
+      <input type="number" id="cfg-poll-interval" min="1" value="2" />
+
+      <label>自动清理截图（天）</label>
+      <input type="number" id="cfg-cleanup-days" min="1" value="7" />
+
+      <div class="toggle-row"><span>监控完成时通知</span><label class="switch"><input type="checkbox" id="cfg-notify-done" checked /><span class="slider"></span></label></div>
+      <div class="toggle-row"><span>监控出错时通知</span><label class="switch"><input type="checkbox" id="cfg-notify-error" checked /><span class="slider"></span></label></div>
+    </section>
+
+    <section class="card">
+      <div class="card-header-row"><h2>快捷键</h2></div>
+      <div class="toggle-row"><span>唤起 Asha</span><span class="muted">⌘⇧A</span></div>
+      <div class="toggle-row"><span>发送当前浏览器 URL</span><span class="muted">⌘⇧C</span></div>
+    </section>
+
+    <div class="save-bar"><button id="btn-save-all">保存设置</button></div>
   </section>
 </div>
 <script src="/app.js"></script>

@@ -1,5 +1,7 @@
 import express from "express";
 import path from "node:path";
+import fs from "node:fs";
+import { execFile } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { config, getLlmConfig, maskApiKey } from "./config.js";
 import { store, applySettingsPatch } from "./store.js";
@@ -49,12 +51,10 @@ app.put("/api/settings", (req, res) => {
 
 // ---- API: screenshot ----
 app.post("/api/screenshot", (req, res) => {
-  const { execFile } = require("node:child_process");
-  const fs = require("node:fs");
   const screenshotDir = path.join(config.dataDir, "screenshots");
   fs.mkdirSync(screenshotDir, { recursive: true });
   const outPath = path.join(screenshotDir, `ss_${Date.now()}.png`);
-  execFile("/usr/sbin/screencapture", ["-x", "-T0", outPath], (err: Error | null) => {
+  execFile("/usr/sbin/screencapture", ["-x", "-T0", outPath], (err) => {
     if (err) { res.status(500).json({ ok: false, error: err.message }); return; }
     broadcast("screenshot_taken", { path: outPath });
     res.json({ ok: true, path: outPath });

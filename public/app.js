@@ -49,7 +49,18 @@ function renderCard(data) {
 function esc(str) { const el = document.createElement("span"); el.textContent = str || ""; return el.innerHTML; }
 
 document.getElementById("btn-screenshot-full").addEventListener("click", async () => {
-  await fetch("/api/screenshot", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "full" }) });
+  const btn = document.getElementById("btn-screenshot-full");
+  btn.textContent = "截图中…";
+  btn.disabled = true;
+  try {
+    const res = await fetch("/api/screenshot", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "full" }) });
+    const data = await res.json();
+    if (data.ok) btn.textContent = "已保存 ✓";
+    else btn.textContent = "截图失败";
+  } catch {
+    btn.textContent = "截图失败";
+  }
+  setTimeout(() => { btn.textContent = "截图全屏"; btn.disabled = false; }, 2000);
 });
 
 document.getElementById("btn-new-monitor").addEventListener("click", () => {
@@ -169,48 +180,98 @@ chatForm.addEventListener("submit", async (e) => {
 });
 
 /* ---- config ---- */
+const LLM_PRESETS = {
+  custom: { baseUrl: "", model: "" },
+  openai: { baseUrl: "https://api.openai.com/v1", model: "gpt-4o-mini" },
+  deepseek: { baseUrl: "https://api.deepseek.com/v1", model: "deepseek-chat" },
+  dashscope: { baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1", model: "qwen-turbo" },
+  glm: { baseUrl: "https://open.bigmodel.cn/api/paas/v4", model: "glm-4-flash" },
+  moonshot: { baseUrl: "https://api.moonshot.cn/v1", model: "moonshot-v1-8k" },
+  volcengine: { baseUrl: "https://ark.cn-beijing.volces.com/api/v3", model: "doubao-pro-32k" },
+  ollama: { baseUrl: "http://localhost:11434/v1", model: "llama3.2" },
+};
+
 async function loadConfig() {
   const res = await fetch("/api/status");
   const data = await res.json();
-  if (data.settings) {
-    document.getElementById("cfg-baseUrl").value = data.settings.llm?.baseUrl || "";
-    document.getElementById("cfg-apiKey").value = data.settings.llm?.apiKey || "";
-    document.getElementById("cfg-model").value = data.settings.llm?.model || "";
-    document.getElementById("cfg-ss-interval").value = data.settings.screenshotIntervalSec || 5;
-    document.getElementById("cfg-poll-interval").value = data.settings.terminalPollIntervalSec || 2;
-    document.getElementById("cfg-notify-done").checked = data.settings.notifyOnDone !== false;
-    document.getElementById("cfg-notify-error").checked = data.settings.notifyOnError !== false;
-  }
+  const s = data.settings || {};
+  document.getElementById("cfg-baseUrl").value = s.llm?.baseUrl || "";
+  document.getElementById("cfg-apiKey").value = s.llm?.apiKey || "";
+  document.getElementById("cfg-model").value = s.llm?.model || "";
+  document.getElementById("cfg-ss-interval").value = s.screenshotIntervalSec ?? 5;
+  document.getElementById("cfg-poll-interval").value = s.terminalPollIntervalSec ?? 2;
+  document.getElementById("cfg-cleanup-days").value = s.autoCleanupDays ?? 7;
+  document.getElementById("cfg-notify-done").checked = s.notifyOnDone !== false;
+  document.getElementById("cfg-notify-error").checked = s.notifyOnError !== false;
+  document.getElementById("llm-warning").style.display = data.llmConfigured ? "none" : "flex";
 }
 loadConfig();
 
-document.getElementById("config-form").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  await fetch("/api/settings", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      llm: {
-        baseUrl: document.getElementById("cfg-baseUrl").value,
-        apiKey: document.getElementById("cfg-apiKey").value,
-        model: document.getElementById("cfg-model").value,
-      },
-    }),
-  });
-  alert("已保存");
+document.getElementById("cfg-preset").addEventListener("change", (e) => {
+  const preset = LLM_PRESETS[e.target.value];
+  if (!preset) return;
+  if (preset.baseUrl) document.getElementById("cfg-baseUrl").value = preset.baseUrl;
+  if (preset.model) document.getElementById("cfg-model").value = preset.model;
 });
 
-document.getElementById("monitor-config-form").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  await fetch("/api/settings", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      screenshotIntervalSec: Number(document.getElementById("cfg-ss-interval").value),
-      terminalPollIntervalSec: Number(document.getElementById("cfg-poll-interval").value),
-      notifyOnDone: document.getElementById("cfg-notify-done").checked,
-      notifyOnError: document.getElementById("cfg-notify-error").checked,
-    }),
-  });
-  alert("已保存");
+document.getElementById("btn-llm-test").addEventListener("click", async () => {
+  const result = document.getElementById("llm-test-result");
+  result.textContent = "测试中…";
+  result.className = "test-result";
+  try {
+    const res = await fetch("/api/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        llm: {
+          baseUrl: document.getElementById("cfg-baseUrl").value,
+          apiKey: document.getElementById("cfg-apiKey").value,
+          model: document.getElementById("cfg-model").value,
+        },
+      }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      result.textContent = "✓ 配置已保存";
+      result.className = "test-result ok";
+    } else {
+      result.textContent = "✗ " + (data.error || "保存失败");
+      result.className = "test-result err";
+    }
+  } catch (err) {
+    result.textContent = "✗ " + (err.message || "网络错误");
+    result.className = "test-result err";
+  }
+});
+
+function miniToast(text) {
+  const el = document.createElement("div");
+  el.className = "mini-toast";
+  el.textContent = text;
+  document.body.appendChild(el);
+  setTimeout(() => { el.style.opacity = "0"; setTimeout(() => el.remove(), 300); }, 1500);
+}
+
+document.getElementById("btn-save-all").addEventListener("click", async () => {
+  const body = {
+    llm: {
+      baseUrl: document.getElementById("cfg-baseUrl").value,
+      apiKey: document.getElementById("cfg-apiKey").value,
+      model: document.getElementById("cfg-model").value,
+    },
+    screenshotIntervalSec: Number(document.getElementById("cfg-ss-interval").value),
+    terminalPollIntervalSec: Number(document.getElementById("cfg-poll-interval").value),
+    autoCleanupDays: Number(document.getElementById("cfg-cleanup-days").value),
+    notifyOnDone: document.getElementById("cfg-notify-done").checked,
+    notifyOnError: document.getElementById("cfg-notify-error").checked,
+  };
+  const res = await fetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const data = await res.json();
+  if (data.ok) {
+    miniToast("设置已保存");
+    document.getElementById("llm-warning").style.display = "flex";
+    if (body.llm.baseUrl && body.llm.apiKey) document.getElementById("llm-warning").style.display = "none";
+  } else {
+    miniToast("保存失败: " + (data.error || ""));
+  }
 });
