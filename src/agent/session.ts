@@ -46,12 +46,18 @@ export class Session {
 
 // In-memory session store (Phase 4 will persist to PGlite)
 const sessions = new Map<string, Session>();
+const MAX_SESSIONS = 20;
 
 export function getOrCreateSession(id: string): Session {
   let session = sessions.get(id);
   if (!session) {
     session = new Session(id);
     sessions.set(id, session);
+    // R6: Evict oldest session if over limit
+    if (sessions.size > MAX_SESSIONS) {
+      const oldest = [...sessions.entries()].sort((a, b) => a[1].createdAt - b[1].createdAt)[0];
+      if (oldest) sessions.delete(oldest[0]);
+    }
   }
   return session;
 }

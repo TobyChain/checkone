@@ -122,6 +122,9 @@ function createMainWindow() {
 function showMainWindow(tab) {
   if (!mainWin) createMainWindow();
   else { mainWin.show(); mainWin.focus(); }
+  if (tab && mainWin) {
+    mainWin.webContents.send("switch-tab", tab);
+  }
 }
 
 // ---- tray ----
@@ -201,6 +204,8 @@ function subscribeEvents() {
   logMain("subscribeEvents: connecting");
   const req = http.get({ host: "127.0.0.1", port: serverPort, path: "/api/events" }, (res) => {
     logMain(`subscribeEvents: connected status=${res.statusCode}`);
+    // R10: Drain the response stream to prevent buffer leak
+    res.on("data", () => {});
     res.on("end", () => { logMain("subscribeEvents: stream ended, reconnecting"); setTimeout(subscribeEvents, 3000); });
     res.on("error", (e) => { logMain(`subscribeEvents: error ${e.message}`); setTimeout(subscribeEvents, 3000); });
   });

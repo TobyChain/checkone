@@ -1,21 +1,34 @@
 /* ---- tab switching ---- */
+function switchTab(tabName) {
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
+  const btn = document.querySelector(`#tabs button[data-tab="${tabName}"]`);
+  if (btn) btn.classList.add("active");
+  const content = document.getElementById("tab-" + tabName);
+  if (content) content.classList.add("active");
+}
+
 document.querySelectorAll("#tabs button").forEach(btn => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll("#tabs button").forEach(b => b.classList.remove("active"));
-    document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
-    btn.classList.add("active");
-    document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
-  });
+  btn.addEventListener("click", () => switchTab(btn.dataset.tab));
 });
 
+// Handle tab switch from main process (tray menu, shortcuts)
+if (window.checkone?.onSwitchTab) {
+  window.checkone.onSwitchTab((tab) => switchTab(tab));
+}
+
 /* ---- SSE ---- */
-const es = new EventSource("/api/events");
-es.addEventListener("monitor_added", (e) => addMonitorCard(JSON.parse(e.data)));
-es.addEventListener("monitor_update", (e) => updateMonitorCard(JSON.parse(e.data)));
-es.addEventListener("monitor_done", (e) => updateMonitorCard(JSON.parse(e.data)));
-es.addEventListener("screenshot_taken", (e) => console.log("screenshot:", JSON.parse(e.data).path));
-es.addEventListener("hello", () => console.log("[sse] connected"));
-es.onerror = () => { es.close(); setTimeout(() => location.reload(), 10000); };
+function connectSSE() {
+  es = new EventSource("/api/events");
+  es.addEventListener("monitor_added", (e) => addMonitorCard(JSON.parse(e.data)));
+  es.addEventListener("monitor_update", (e) => updateMonitorCard(JSON.parse(e.data)));
+  es.addEventListener("monitor_done", (e) => updateMonitorCard(JSON.parse(e.data)));
+  es.addEventListener("screenshot_taken", (e) => console.log("screenshot:", JSON.parse(e.data).path));
+  es.addEventListener("hello", () => console.log("[sse] connected"));
+  es.onerror = () => { es.close(); setTimeout(connectSSE, 5000); };
+}
+let es;
+connectSSE();
 
 /* ---- dashboard ---- */
 function addMonitorCard(data) {
@@ -47,6 +60,19 @@ function renderCard(data) {
 }
 
 function esc(str) { const el = document.createElement("span"); el.textContent = str || ""; return el.innerHTML; }
+
+// Event delegation for monitor card buttons (cancel, etc.)
+document.getElementById("monitor-list").addEventListener("click", async (e) => {
+  const btn = e.target.closest("button[data-action]");
+  if (!btn) return;
+  const action = btn.dataset.action;
+  const id = btn.dataset.id;
+  if (action === "cancel") {
+    await fetch(`/api/monitors/${id}`, { method: "DELETE" });
+    const card = document.getElementById("monitor-" + id);
+    if (card) card.remove();
+  }
+});
 
 document.getElementById("btn-screenshot-full").addEventListener("click", async () => {
   const btn = document.getElementById("btn-screenshot-full");

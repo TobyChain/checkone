@@ -20,7 +20,7 @@ router.post("/chat", async (req, res) => {
       (m.role === "user" || m.role === "assistant") && typeof m.content === "string"
   );
 
-  if (userMessages.length === 0) {
+  if (!Array.isArray(userMessages) || userMessages.length === 0) {
     res.status(400).json({ error: "缺少消息" });
     return;
   }
@@ -51,8 +51,11 @@ router.post("/chat", async (req, res) => {
   });
   const context = session.buildContext(systemPrompt);
 
+  const aborter = new AbortController();
+  // R2: Abort agent loop when client disconnects
+  req.on("close", () => aborter.abort());
+
   try {
-    const aborter = new AbortController();
     let streamEl: string | null = null;
 
     const result = await runAgentLoop(context, tools, handlers, {

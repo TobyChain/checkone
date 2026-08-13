@@ -44,6 +44,7 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Ping
 .monitor-card .card-status.running { background: var(--green); }
 .monitor-card .card-status.done { background: var(--muted); }
 .monitor-card .card-status.error { background: var(--danger); }
+.monitor-card .card-status.cancelled { background: var(--orange); }
 .monitor-card .card-label { font-weight: 600; }
 .monitor-card .card-progress { height: 4px; background: var(--border); border-radius: 2px; margin: 6px 0; overflow: hidden; }
 .monitor-card .card-progress-bar { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s; }

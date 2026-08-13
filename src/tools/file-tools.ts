@@ -5,13 +5,12 @@ import path from "node:path";
 import os from "node:os";
 
 const ALLOWED_ROOTS = [
-  os.homedir(),
-  "/tmp",
-  "/Users",
+  os.homedir() + path.sep,
+  "/tmp" + path.sep,
 ];
 
 function isAllowed(p: string): boolean {
-  const resolved = path.resolve(p);
+  const resolved = path.resolve(p) + path.sep;
   return ALLOWED_ROOTS.some((root) => resolved.startsWith(root));
 }
 

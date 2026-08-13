@@ -16,7 +16,7 @@ const app = express();
 // ---- DNS rebinding protection ----
 app.use((req, res, next) => {
   const host = (req.headers.host || "").split(":")[0];
-  if (host === "localhost" || host === "127.0.0.1" || host === "[::1]" || host === "") return next();
+  if (host === "localhost" || host === "127.0.0.1" || host === "[::1]") return next();
   res.status(403).json({ error: "仅允许本机访问" });
 });
 
@@ -97,4 +97,9 @@ app.get("/api/events", (req, res) => {
 // ---- start ----
 app.listen(config.port, "127.0.0.1", () => {
   console.log(`[checkone] server listening on 127.0.0.1:${config.port}`);
+});
+
+// Y8: Prevent unhandled rejections from crashing the server
+process.on("unhandledRejection", (err) => {
+  console.error("[checkone] unhandledRejection:", err);
 });

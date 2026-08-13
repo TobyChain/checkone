@@ -92,7 +92,8 @@ export const store = {
   },
 
   saveMemory(): void {
-    atomicWrite(memoryPath(), this.memory.slice(-100));
+    if (this.memory.length > 100) this.memory = this.memory.slice(-100);
+    atomicWrite(memoryPath(), this.memory);
   },
 
   addMemory(text: string): void {
